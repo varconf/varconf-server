@@ -1,0 +1,16 @@
+language: go
+
+go: 
+  - 1.13
+  
+os:
+  - windows
+  - linux
+  - osx
+  
+env:
+  - GO111MODULE=on
+
+script: 
+  - go test -v -mod=vendor ./...
+  - go build -mod=vendor
