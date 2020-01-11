@@ -1,0 +1,11 @@
+{
+  "server" : {
+    "ip" : "0.0.0.0",
+    "port" : 80,
+    "static" : "xxx"
+  },
+  "database" : {
+    "driver" : "mysql",
+    "dataSource" : "xxx?charset=utf8&parseTime=true&loc=Local"
+  }
+}
