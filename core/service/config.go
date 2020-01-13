@@ -4,6 +4,9 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"github.com/robfig/cron"
+	"strconv"
+	"strings"
 	"time"
 
 	"varconf-server/core/dao"
@@ -17,6 +20,7 @@ type ConfigService struct {
 	releaseLogDao *dao.ReleaseLogDao
 	manageTxDao   *dao.ManageTxDao
 	messagePoll   *poll.MessagePoll
+	lastIndexMap  map[string]int
 }
 
 func NewConfigService(db *sql.DB) *ConfigService {
@@ -27,6 +31,7 @@ func NewConfigService(db *sql.DB) *ConfigService {
 		releaseLogDao: dao.NewReleaseLogDao(db),
 		manageTxDao:   dao.NewManageTxDao(db),
 		messagePoll:   poll.NewMessagePoll(),
+		lastIndexMap:  make(map[string]int),
 	}
 	return &configService
 }
@@ -117,18 +122,90 @@ func (_self *ConfigService) QueryRelease(appId int64) ([]dao.ConfigData, int) {
 	}
 
 	configList := make([]dao.ConfigData, 0)
-	err := json.Unmarshal([]byte(releaseData.ConfigList), &configList)
-	if err != nil {
+	if err := json.Unmarshal([]byte(releaseData.ConfigList), &configList); err != nil {
 		return nil, 0
 	}
 	return configList, releaseData.ReleaseIndex
 }
 
-func (_self *ConfigService) PullRelease(appId int64, key string) (*poll.MessagePoll, *poll.Element) {
+func (_self *ConfigService) CronRelease(spec string) {
+	c := cron.New()
+	c.AddFunc(spec, func() {
+		// query keys
+		keys := _self.messagePoll.Keys()
+		if keys == nil || len(keys) == 0 {
+			return
+		}
+
+		// parse appId and lastIndex
+		appIds := make([]int64, 0, len(keys))
+		appIndexMap := make(map[int64]int)
+		for _, key := range keys {
+			// parse lastIndex
+			lastIndex, exist := _self.lastIndexMap[key]
+			if !exist {
+				continue
+			}
+
+			// parse appId
+			arrays := strings.Split(key, "_")
+			if len(arrays) != 2 && len(arrays) != 3 {
+				continue
+			}
+			appId, err := strconv.ParseInt(arrays[1], 10, 64)
+			if err != nil {
+				continue
+			}
+
+			appIds = append(appIds, appId)
+			appIndexMap[appId] = lastIndex
+		}
+		if len(appIds) < 1 {
+			return
+		}
+
+		// query release data
+		releases := _self.releaseDao.QueryReleases(appIds)
+		if releases == nil || len(releases) == 0 {
+			return
+		}
+
+		// parse release data
+		for _, release := range releases {
+			// check app is have been released
+			lastIndex := appIndexMap[release.AppId]
+			if lastIndex == release.ReleaseIndex {
+				continue
+			}
+
+			// parse config data
+			configList := make([]dao.ConfigData, 0)
+			if err := json.Unmarshal([]byte(release.ConfigList), &configList); err != nil {
+				continue
+			}
+			if configList == nil || len(configList) == 0 {
+				continue
+			}
+
+			// parse key and push data
+			appKeys := make([]string, 0, len(configList))
+			for _, config := range configList {
+				appKeys = append(appKeys, config.Key)
+			}
+			_self.pushRelease(release.AppId, appKeys)
+		}
+	})
+	c.Start()
+}
+
+func (_self *ConfigService) PullRelease(appId int64, key string, lastIndex int) (*poll.MessagePoll, *poll.Element) {
 	pollKey := fmt.Sprintf("app_%d", appId)
 	if key != "" {
-		pollKey = fmt.Sprintf("app_%d_%s", appId, key)
+		pollKey = fmt.Sprintf("key_%d_%s", appId, key)
 	}
+
+	// put key's lastIndex
+	_self.lastIndexMap[pollKey] = lastIndex
 
 	// long poll for config
 	return _self.messagePoll, _self.messagePoll.Poll(pollKey)
@@ -145,7 +222,7 @@ func (_self *ConfigService) pushRelease(appId int64, keys []string) {
 	}
 
 	for _, key := range keys {
-		pollKey = fmt.Sprintf("app_%d_%s", appId, key)
+		pollKey = fmt.Sprintf("key_%d_%s", appId, key)
 		if _self.messagePoll.Contain(pollKey) {
 			_self.messagePoll.Push(pollKey, key)
 		}

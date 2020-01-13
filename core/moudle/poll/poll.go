@@ -7,7 +7,7 @@ import (
 )
 
 type Element struct {
-	key     interface{}
+	key     string
 	element *list.Element
 }
 
@@ -17,16 +17,16 @@ func (_self *Element) Chan() chan interface{} {
 
 type MessagePoll struct {
 	lock        sync.RWMutex
-	chanListMap map[interface{}]*list.List
+	chanListMap map[string]*list.List
 }
 
 func NewMessagePoll() *MessagePoll {
 	return &MessagePoll{
-		chanListMap: make(map[interface{}]*list.List),
+		chanListMap: make(map[string]*list.List),
 	}
 }
 
-func (_self *MessagePoll) Poll(key interface{}) *Element {
+func (_self *MessagePoll) Poll(key string) *Element {
 	_self.lock.Lock()
 	defer _self.lock.Unlock()
 
@@ -39,7 +39,7 @@ func (_self *MessagePoll) Poll(key interface{}) *Element {
 	return &Element{key: key, element: chanList.PushBack(pollChan)}
 }
 
-func (_self *MessagePoll) Contain(key interface{}) bool {
+func (_self *MessagePoll) Contain(key string) bool {
 	_self.lock.RLock()
 	defer _self.lock.RUnlock()
 
@@ -50,7 +50,18 @@ func (_self *MessagePoll) Contain(key interface{}) bool {
 	return false
 }
 
-func (_self *MessagePoll) Push(key, data interface{}) bool {
+func (_self *MessagePoll) Keys() []string {
+	_self.lock.RLock()
+	defer _self.lock.RUnlock()
+
+	keys := make([]string, 0, len(_self.chanListMap))
+	for key := range _self.chanListMap {
+		keys = append(keys, key)
+	}
+	return keys
+}
+
+func (_self *MessagePoll) Push(key string, data interface{}) bool {
 	_self.lock.Lock()
 	defer _self.lock.Unlock()
 

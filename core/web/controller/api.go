@@ -88,7 +88,7 @@ func (_self *ApiController) pullAndResponse(w http.ResponseWriter, appId int64, 
 		return
 	}
 
-	messagePoll, pollElement := _self.configService.PullRelease(appId, key)
+	messagePoll, pollElement := _self.configService.PullRelease(appId, key, lastIndex)
 	select {
 	case <-pollElement.Chan():
 		messagePoll.Remove(pollElement)
