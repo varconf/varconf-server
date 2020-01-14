@@ -147,11 +147,11 @@ func (_self *Router) SetAddress(args ...interface{}) {
 	if len(args) == 1 {
 		switch arg := args[0].(type) {
 		case string:
-			addrs := strings.Split(args[0].(string), ":")
-			if len(addrs) == 1 {
-				host = addrs[0]
-			} else if len(addrs) >= 2 {
-				port = addrs[1]
+			arrays := strings.Split(args[0].(string), ":")
+			if len(arrays) == 1 {
+				host = arrays[0]
+			} else if len(arrays) >= 2 {
+				port = arrays[1]
 			}
 		case int:
 			port = strconv.Itoa(arg)
@@ -217,8 +217,17 @@ func (_self *Router) Any(path string, handlerFunc Handler) {
 }
 
 func (_self *Router) Static(path, root, index string) {
-	bind := make(map[string]interface{})
+	// parse to absolute path
+	if strings.HasPrefix(root, "./") || strings.HasPrefix(root, "../") {
+		ep, err := os.Executable()
+		if err != nil {
+			panic(err)
+		}
+		root = filepath.Join(filepath.Dir(ep), root)
+	}
 
+	// init bind data
+	bind := make(map[string]interface{})
 	bind[ROOT] = root
 	bind[INDEX] = index
 

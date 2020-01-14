@@ -3,6 +3,7 @@ package dao
 import (
 	"bytes"
 	"database/sql"
+	"fmt"
 	"strings"
 
 	"varconf-server/core/dao/common"
@@ -22,6 +23,27 @@ type ReleaseDao struct {
 func NewReleaseDao(db *sql.DB) *ReleaseDao {
 	releaseDao := ReleaseDao{common.Dao{DB: db}}
 	return &releaseDao
+}
+
+func (_self *ReleaseDao) QueryReleases(appIds []int64) []*ReleaseData {
+	values := make([]interface{}, 0)
+	sql := "SELECT * FROM `release` WHERE `app_id` in "
+
+	var ids bytes.Buffer
+	for _, appId := range appIds {
+		ids.WriteString(fmt.Sprintf("%d, ", appId))
+	}
+	sql = sql + "(" + strings.Trim(ids.String(), ", ") + ")"
+
+	releases := make([]*ReleaseData, 0)
+	success, err := _self.StructSelect(&releases, sql, values...)
+	if err != nil {
+		panic(err)
+	}
+	if success {
+		return releases
+	}
+	return nil
 }
 
 func (_self *ReleaseDao) QueryRelease(appId int64) *ReleaseData {

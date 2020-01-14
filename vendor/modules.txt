@@ -2,3 +2,5 @@
 github.com/go-sql-driver/mysql
 # github.com/google/uuid v1.1.1
 github.com/google/uuid
+# github.com/robfig/cron v1.2.0
+github.com/robfig/cron

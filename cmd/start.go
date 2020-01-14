@@ -29,9 +29,14 @@ type ServerInfo struct {
 	Static string `json:"static"`
 }
 
+type ServiceInfo struct {
+	Cron string `json:"cron"`
+}
+
 type ConfigInfo struct {
 	ServerInfo   ServerInfo   `json:"server"`
 	DatabaseInfo DatabaseInfo `json:"database"`
+	ServiceInfo  ServiceInfo  `json:"service"`
 }
 
 func Start(configPath string) error {
@@ -50,7 +55,7 @@ func Start(configPath string) error {
 		return errors.New("router init error")
 	}
 
-	initMVC(routeMux, dbConnect)
+	initMVC(routeMux, dbConnect, configInfo.ServiceInfo)
 
 	return routeMux.Run()
 }
@@ -90,7 +95,7 @@ func initRouter(serverInfo ServerInfo) *router.Router {
 	return routeMux
 }
 
-func initMVC(routeMux *router.Router, dbConnect *sql.DB) {
+func initMVC(routeMux *router.Router, dbConnect *sql.DB, serviceInfo ServiceInfo) {
 	logger := log.New(os.Stdout, "", log.Ldate|log.Ltime)
 	routeMux.SetLogger(logger)
 
@@ -109,4 +114,6 @@ func initMVC(routeMux *router.Router, dbConnect *sql.DB) {
 	controller.InitUserController(routeMux, authService, userService)
 	controller.InitAppController(routeMux, appService, configService)
 	controller.InitConfigController(routeMux, configService)
+
+	configService.CronRelease(serviceInfo.Cron)
 }
