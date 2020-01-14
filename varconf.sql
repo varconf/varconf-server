@@ -1,5 +1,5 @@
-SET NAMES utf8mb4;
-SET FOREIGN_KEY_CHECKS = 0;
+CREATE DATABASE `varconf` DEFAULT CHARACTER SET utf8 COLLATE utf8_general_ci;
+USE varconf;
 
 -- ----------------------------
 -- Table structure for app
@@ -93,5 +93,3 @@ CREATE TABLE `user` (
 BEGIN;
 INSERT INTO `user` VALUES (1, 'admin', '123456', 2, '2020-01-11 22:48:46', '2020-01-11 22:48:50');
 COMMIT;
-
-SET FOREIGN_KEY_CHECKS = 1;

@@ -59,7 +59,3 @@ varconf -s stop
 `2.配置页面`
 
 ![image](https://github.com/varconf/varconf-doc/blob/master/images/config_status.png)
-
-## 系统架构
-
-## 发布历史
