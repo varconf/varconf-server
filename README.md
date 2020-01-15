@@ -28,7 +28,8 @@ go build -mod=vendor
 ```
 ### docker部署
 ```
-TODO
+docker pull varconf/varconf-server
+docker run -p 8088:8088 varconf/varconf-server
 ```
 
 ### 操作命令
