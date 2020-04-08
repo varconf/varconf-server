@@ -27,7 +27,7 @@ go build -mod=vendor
 ```
 在config.json中写入数据库配置文件
 ```
-### docker部署
+### docker部署（默认账号密码：admin/123456）
 ```
 docker pull varconf/varconf-server
 docker run -p 8088:8088 varconf/varconf-server
